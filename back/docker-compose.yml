@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  user-service:
+    build: ./back/user-service
+    ports:
+      - "5000:5000"
+    environment:
+      - DB_URL=postgresql://meeting_user:password@db:5432/user_db
+      - SECRET_KEY=your-secret-key-here
+      - GOOGLE_CLIENT_ID=your-google-client-id
+      - GOOGLE_CLIENT_SECRET=your-google-client-secret
+    depends_on:
+      - db
+
+  salle-service:
+    build: ./back/salle-service
+    ports:
+      - "5002:5002"
+    environment:
+      - DB_URL=postgresql://meeting_user:password@db:5432/room_db
+      - SECRET_KEY=your-secret-key-here
+    depends_on:
+      - db
+
+  reservation-service:
+    build: ./back/reservation-service
+    ports:
+      - "5003:5003"
+    environment:
+      - DB_URL=postgresql://meeting_user:password@db:5432/reservation_db
+      - SECRET_KEY=your-secret-key-here
+    depends_on:
+      - kafka
+      - db
+
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=meeting_user
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  kafka:
+    image: wurstmeister/kafka:latest
+    environment:
+      KAFKA_ADVERTISED_LISTENER: kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
+      KAFKA_LISTENER_NAME: INSIDE
+      KAFKA_LISTENERS: INSIDE://kafka:9092
+      KAFKA_LISTENER_PORT: 9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+   
+    depends_on:
+      - zookeeper
+
+  zookeeper:
+    image: wurstmeister/zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
+
+volumes:
+  db_data:
+    driver: local
